@@ -67,8 +67,8 @@
         canvas1.height = height;
         canvas2.width = width;
         canvas2.height = height;
-        drawPolygon(canvas1, a);
-        drawPolygon(canvas2, b);
+        drawPolygon(canvas1, a, minX, minY);
+        drawPolygon(canvas2, b, minX, minY);
         var similarity = 1 - calculateDiff(canvas1, canvas2, width, height);
         return similarity;
     }
@@ -128,19 +128,23 @@
      * 在canvas上根据多边形端点数组绘制多边形
      * 要求端点数组有序
      *
-     * @param {canvas DOM element} canvas 画布元素 1
-     * @param {Array} vertex 多边形端点数组 2 // [[1, 2], [3, 4], [4, 7]]
+     * @param {canvas DOM element} canvas 画布元素
+     * @param {Array} vertex 多边形端点数组 // [[1, 2], [3, 4], [4, 7]]
+     * @param {number} offsetX x轴偏移量
+     * @param {number} offsetY y轴偏移量
      */
 
-    function drawPolygon(canvas, vertex) {
+    function drawPolygon(canvas, vertex, offsetX, offsetY) {
+        var offsetX = offsetX || 0;
+        var offsetY = offsetY || 0;
         var context = canvas.getContext('2d');
         context.beginPath();
         var beginX;
         var beginY;
         for (var i = 0; i < vertex.length; i++) {
             var point = vertex[i];
-            var x = point[0];
-            var y = point[1];
+            var x = point[0] - offsetX;
+            var y = point[1] - offsetY;
             if (i === 0) {
                 beginX = x;
                 beginY = y;

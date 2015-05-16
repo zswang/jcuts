@@ -6,30 +6,20 @@
     <script src="../bower_components/jmaths/jmaths.js"></script>
     <script src="../bower_components/jpaths/jpaths.js"></script>
     <style>
-.canvas {
-  border: solid 1px #ccc;
-  width: 400px;
-  height: 400px;
-  position: relative;
-  float: left;
-  margin-right: 10px;
-}
-canvas {
-  border: solid 1px red;
-  width: 400px;
-  height: 400px;
-  position: relative;
-  float: left;
-  margin-right: 10px;
-}
+      .canvas {
+        border: solid 1px #ccc;
+        width: 400px;
+        height: 400px;
+        position: relative;
+        float: left;
+        margin-right: 10px;
+      }
     </style>
 </head>
 <body>
     <div id="canvas"></div>
     <div class="canvas" id="div-1"></div>
     <div  class="canvas" id="div-2"></div>
-    <canvas width="400" height="400" id="canvas-1"></div>
-    <canvas width="400" height="400" id="canvas-2"></div>
     <!-- <canvas id="canvas-diff"></canvas> -->
 </body>
 <script>
@@ -75,21 +65,23 @@ canvas {
       document.getElementById('div-1').appendChild(canvas1);
       document.getElementById('div-2').appendChild(canvas2);
       // var canvasDiff = document.getElementById("canvas-diff");
-      drawPolygon(canvas1, a);
-      drawPolygon(canvas2, b);
+      drawPolygon(canvas1, a, minX, minY);
+      drawPolygon(canvas2, b, minX, minY);
       var similarity = 1 - calculateDiff(canvas1, canvas2, width, height);
-      console.log(similarity);
+      console.log('similarity: ' + similarity);
       return similarity;
     }
-    function drawPolygon(canvas, vertex) {
+    function drawPolygon(canvas, vertex, offsetX, offsetY) {
+      var offsetX = offsetX || 0;
+      var offsetY = offsetY || 0;
       var context = canvas.getContext('2d'); 
       context.beginPath(); 
       var beginX;
       var beginY;
       for (var i = 0; i < vertex.length; i++) {
         var point = vertex[i];
-        var x = point[0];
-        var y = point[1];
+        var x = point[0] - offsetX;
+        var y = point[1] - offsetY;
         if (i === 0) {
           beginX = x;
           beginY = y;
@@ -100,8 +92,7 @@ canvas {
       }
       context.lineTo(beginX, beginY);
       context.closePath();
-      // context.fill();
-      context.stroke();
+      context.fill();
     }
     function calculateDiff(canvas1, canvas2, width, height) {
       var context1 = canvas1.getContext('2d');
@@ -110,7 +101,7 @@ canvas {
       var imgData2 = context2.getImageData(0, 0, width, height);
       var diffPixelNum = 0;
       var baseNum = 0;
-      for (var i = 0; i < imgData1.data.length; i+=4) {
+      for (var i = 0; i < imgData1.data.length; i += 4) {
         baseNum += imgData1.data[i + 3] / 255;
         baseNum += imgData2.data[i + 3] / 255;
         var pixelDiff = Math.abs(imgData1.data[i + 3] - imgData2.data[i + 3]) / 255;
@@ -120,53 +111,11 @@ canvas {
       return diffPixelNum / baseNum;
     }
 
-    function getCutPolygons(edges, x, y, polygon) {
-      var newPolygon = [];
-      var deltaAngle = 360 / (4 * edges);
-      for (var i = 0; i < polygon.length; i++) {
-        var m = polygon[i][0];
-        var n = polygon[i][1];
-        var angle;
-        if (n === y) {
-          angle = 90;
-        }else {
-          angle = Math.atan(Math.abs(m - x) / Math.abs(n - y)) * 180 / Math.PI;
-        }
-        if (m > x) {
-          angle = deltaAngle - angle;
-        }else {
-          angle = deltaAngle + angle;
-        }
-        var arc = 2 * angle * Math.PI / 180;
-        // console.log(jmaths.rotatePoint(polygon[i], [x, y], arc));
-        newPolygon.push(jmaths.rotatePoint(polygon[i], [x, y], arc));
-      }
+    var polygon1 = [[5, 5], [5, 15], [10, 15]];
+    var polygon2 = [[5, 5], [5, 15], [10, 5]];
+    var polygon3 = [[5, 0], [10, 0], [10, 10]];
 
-      var polygons = [];
-      polygons.push(polygon);
-      polygons.push(newPolygon);
-
-      for (var i = 1; i < edges; i++) {
-        var arc = (i * 360 / edges) * Math.PI / 180;
-        var rPolygon = [];
-        var rNewPolygon = [];
-        for (var j = 0; j < polygon.length; j++) {
-          rPolygon.push(jmaths.rotatePoint(polygon[j], [x, y], arc));
-          rNewPolygon.push(jmaths.rotatePoint(newPolygon[j], [x, y], arc));
-        }
-        polygons.push(rPolygon);
-        polygons.push(rNewPolygon);
-      }
-
-      console.log(polygons.length);
-      var canvas1 = document.getElementById('canvas-1');
-      for (var i = 0; i < polygons.length; i++) {
-        drawPolygon(canvas1, polygons[i]);
-      }
-    }
-    getCutPolygons(8, 100, 100, [[50, 50], [110, 40], [40, 90], [100, 100]]);
-
-    // diffPolygon([[0, 0], [0, 10], [5, 10]], [[0, 0], [5, 10], [0, 10]]);
+    diffPolygon(polygon1, polygon2);
 
 })();
 </script>

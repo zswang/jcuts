@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>jcuts.js examples</title>
+    <script src="../src/jcuts.js"></script>
+    <script src="../bower_components/jmaths/jmaths.js"></script>
+    <script src="../bower_components/jpaths/jpaths.js"></script>
+    <style>
+      canvas {
+        border: solid 1px red;
+        width: 400px;
+        height: 400px;
+        position: relative;
+        float: left;
+        margin-right: 10px;
+      }
+    </style>
+</head>
+<body>
+    <div id="canvas"></div>
+    <canvas width="400" height="400" id="canvas-1"></div>
+</body>
+<script>
+(function() {
+    function drawPolygon(canvas, vertex) {
+      var context = canvas.getContext('2d'); 
+      context.beginPath(); 
+      var beginX;
+      var beginY;
+      for (var i = 0; i < vertex.length; i++) {
+        var point = vertex[i];
+        var x = point[0];
+        var y = point[1];
+        if (i === 0) {
+          beginX = x;
+          beginY = y;
+          context.moveTo(x, y);
+        } else {
+          context.lineTo(x, y);
+        }
+      }
+      context.lineTo(beginX, beginY);
+      context.closePath();
+      context.fill();
+      // context.stroke();
+    }
+
+    function getCutPolygons(edges, x, y, polygon) {
+      var newPolygon = [];
+      var deltaAngle = 360 / (4 * edges);
+      for (var i = 0; i < polygon.length; i++) {
+        var m = polygon[i][0];
+        var n = polygon[i][1];
+        var angle;
+        if (n === y) {
+          angle = 90;
+        }else {
+          angle = Math.atan(Math.abs(m - x) / Math.abs(n - y)) * 180 / Math.PI;
+        }
+        if (m > x) {
+          angle = deltaAngle - angle;
+        }else {
+          angle = deltaAngle + angle;
+        }
+        var arc = 2 * angle * Math.PI / 180;
+        // console.log(jmaths.rotatePoint(polygon[i], [x, y], arc));
+        newPolygon.push(jmaths.rotatePoint(polygon[i], [x, y], arc));
+      }
+
+      var polygons = [];
+      polygons.push(polygon);
+      polygons.push(newPolygon);
+
+      for (var i = 1; i < edges; i++) {
+        var arc = (i * 360 / edges) * Math.PI / 180;
+        var rPolygon = [];
+        var rNewPolygon = [];
+        for (var j = 0; j < polygon.length; j++) {
+          rPolygon.push(jmaths.rotatePoint(polygon[j], [x, y], arc));
+          rNewPolygon.push(jmaths.rotatePoint(newPolygon[j], [x, y], arc));
+        }
+        polygons.push(rPolygon);
+        polygons.push(rNewPolygon);
+      }
+
+      console.log(polygons.length);
+      var canvas1 = document.getElementById('canvas-1');
+      for (var i = 0; i < polygons.length; i++) {
+        drawPolygon(canvas1, polygons[i]);
+      }
+    }
+    getCutPolygons(6, 100, 100, [[100, 100], [110, 40], [120, 90]]);
+
+})();
+</script>
+</html>
