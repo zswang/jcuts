@@ -6,10 +6,10 @@
     <script src="../bower_components/jmaths/jmaths.js"></script>
     <script src="../bower_components/jpaths/jpaths.js"></script>
     <style>
-#canvas {
+#canvas, #canvas1, #canvas2 {
   border: solid 1px #ccc;
-  width: 500px;
-  height: 500px;
+  width: 300px;
+  height: 300px;
   position: relative;
   float: left;
 }
@@ -17,13 +17,15 @@
 </head>
 <body>
     <div id="canvas"></div>
+    <div id="canvas1"></div>
+    <div id="canvas2"></div>
     <div id="log"></div>
 </body>
 <script>
 (function() {
     var canvas = document.querySelector('#canvas');
 
-    var paper = jcuts.createPaper(3, 250, 250, 200);
+    var paper = jcuts.createPaper(6, 150, 250, 200);
 
     var paperCanvas = jpaths.create({
         parent: canvas,
@@ -48,14 +50,18 @@
         stroke: 'green'
     });
     var paperCanvasCutA = jpaths.create({
-        parent: canvas,
+        parent: 'canvas1',
         stroke: '#00ff00',
         fill: '#00ff00'
     });
     var paperCanvasCutB = jpaths.create({
-        parent: canvas,
+        parent: 'canvas2',
         stroke: '#ff00ff',
         fill: '#ff00ff'
+    });
+    var paperCanvasCutC = jpaths.create({
+        parent: 'canvas',
+        stroke: 'black'
     });
 
     var log = document.querySelector('#log');
@@ -95,6 +101,10 @@
             return;
         }
         log.textContent = 'ok';
+        paperCanvasCut.attr({
+            path: ''
+        });
+
         paperCanvasCutA.attr({
             // path: paper.getCutModelPath()
             path: paper.debug('a')
@@ -102,6 +112,14 @@
 
         paperCanvasCutB.attr({
             path: paper.debug('b')
+        });
+
+        paperCanvasCutC.attr({
+            path: paper.debug('c')
+        });
+
+        paperCanvasSub.attr({
+            path: paper.getModelPath()
         });
     });
 })();

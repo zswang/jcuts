@@ -312,11 +312,13 @@
         }
         instance.getCutModelPath = getCutModelPath;
 
+        /*<debug>*/
         var debugs = {};
         instance.debug = function(name) {
             return debugs[name];
         };
         window.debugs = debugs;
+        /*</debug>*/
 
         /**
          * 剪切纸片
@@ -326,7 +328,6 @@
          */
         function cut(polygon) {
             if (!polygon || polygon.length < 2) {
-                console.log('cut exit 1');
                 return;
             }
 
@@ -334,7 +335,6 @@
             var modelPolygon = getModelPolygon();
             if (ptInPolygon(polygon[0], modelPolygon) ||
                 ptInPolygon(polygon[polygon.length - 1], modelPolygon)) {
-                console.log('cut exit 2');
                 return;
             }
 
@@ -345,25 +345,122 @@
                     var lineB = [polygon[j - 1], polygon[j]];
                     if (jmaths.doubleLineIntersect(
                         lineA[0], lineA[1], lineB[0], lineB[1])) {
-                        console.log('cut exit 3');
                         return;
                     }
                 }
             }
 
             function doCut(startModelIndex, endModelIndex) {
+                var a = [];
+                var b = [];
+
                 var start = cutModelPath[0][0];
                 var end = cutModelPath[cutModelPath.length - 1][1];
-                var a = [];
-                var modelIndex = startModelIndex;
-                for (var i = 0; i < modelPath.length; i++) {
-                    console.log('a', modelIndex);
-                    next = modelPath[modelIndex][1];
-                    if (modelIndex === endModelIndex) {
+
+                if (startModelIndex !== endModelIndex) {
+                    var modelIndex = startModelIndex;
+                    var temp = start;
+                    for (var i = 0; i < modelPath.length; i++) {
+                        next = modelPath[modelIndex][1];
+                        if (modelIndex === endModelIndex) {
+                            a.push([
+                                temp,
+                                end,
+                                modelPath[modelIndex][2]
+                            ]);
+                            for (var j = cutModelPath.length - 1; j >= 0; j--) {
+                                a.push([
+                                    cutModelPath[j][1],
+                                    cutModelPath[j][0],
+                                    cutModelPath[j][2]
+                                ]);
+                            }
+                            break;
+                        }
+                        a.push([
+                            temp,
+                            next,
+                            modelPath[modelIndex][2]
+                        ]);
+                        temp = next;
+                        modelIndex = (modelIndex + 1) % modelPath.length;
+                    }
+
+                    var modelIndex = startModelIndex;
+                    var temp = start;
+                    for (var i = 0; i < modelPath.length; i++) {
+                        next = modelPath[modelIndex][0];
+                        if (modelIndex === endModelIndex) {
+                            b.push([
+                                temp,
+                                end,
+                                modelPath[modelIndex][2]
+                            ]);
+                            for (var j = cutModelPath.length - 1; j >= 0; j--) {
+                                b.push([
+                                    cutModelPath[j][1],
+                                    cutModelPath[j][0],
+                                    cutModelPath[j][2]
+                                ]);
+                            }
+                            break;
+                        }
+                        b.push([
+                            temp,
+                            next,
+                            modelPath[modelIndex][2]
+                        ]);
+                        temp = next;
+                        modelIndex--;
+                        if (modelIndex < 0) {
+                            modelIndex = modelPath.length - 1;
+                        }
+                    }
+                }
+                else { // 在同一条边上
+                    if (jmaths.pointToPoint(modelPath[startModelIndex][0], start) <
+                        jmaths.pointToPoint(modelPath[startModelIndex][0], end)) {
+                        a.push([
+                            modelPath[startModelIndex][0],
+                            start,
+                            modelPath[startModelIndex][2]
+                        ]);
+                        for (var j = 0; j < cutModelPath.length; j++) {
+                            a.push(cutModelPath[j]);
+                        }
+                        a.push([
+                            end,
+                            modelPath[startModelIndex][1],
+                            modelPath[startModelIndex][2]
+                        ]);
+                        for (var i = 1; i < modelPath.length; i++) {
+                            a.push(modelPath[
+                                (startModelIndex + i) % modelPath.length]);
+                        }
+
+                        for (var j = 0; j < cutModelPath.length; j++) {
+                            b.push(cutModelPath[j]);
+                        }
+                        b.push([
+                            end,
+                            start,
+                            modelPath[startModelIndex][2]
+                        ]);
+                    }
+                    else { // 逆方向
                         a.push([
                             start,
+                            modelPath[startModelIndex][1],
+                            modelPath[startModelIndex][2]
+                        ]);
+                        for (var i = 1; i < modelPath.length; i++) {
+                            a.push(modelPath[
+                                (startModelIndex + i) % modelPath.length]);
+                        }
+                        a.push([
+                            modelPath[startModelIndex][0],
                             end,
-                            modelPath[modelIndex][2]
+                            modelPath[startModelIndex][2]
                         ]);
                         for (var j = cutModelPath.length - 1; j >= 0; j--) {
                             a.push([
@@ -372,16 +469,19 @@
                                 cutModelPath[j][2]
                             ]);
                         }
-                        break;
+
+                        b.push([
+                            end,
+                            start,
+                            modelPath[startModelIndex][2]
+                        ]);
+                        for (var j = 0; j < cutModelPath.length; j++) {
+                            b.push(cutModelPath[j]);
+                        }
                     }
-                    a.push([
-                        start,
-                        next,
-                        modelPath[modelIndex][2]
-                    ]);
-                    start = next;
-                    modelIndex = (modelIndex + 1) % modelPath.length;
                 }
+                // console.log(JSON.stringify(a, null, '  '));
+
                 var m = [];
                 a.forEach(function(line) {
                     m.push([line[0].slice(), line[1].slice()]);
@@ -391,48 +491,36 @@
                     lines: m.slice(1).join(' '),
                 });
 
-                var start = cutModelPath[0][0];
-                var end = cutModelPath[cutModelPath.length - 1][1];
-                var b = [];
-                var modelIndex = startModelIndex;
-                for (var i = 0; i < modelPath.length; i++) {
-                    next = modelPath[modelIndex][0];
-                    if (modelIndex === endModelIndex) {
-                        b.push([
-                            start,
-                            end,
-                            modelPath[modelIndex][2]
-                        ]);
-                        for (var j = cutModelPath.length - 1; j >= 0; j--) {
-                            b.push([
-                                cutModelPath[j][1],
-                                cutModelPath[j][0],
-                                cutModelPath[j][2]
-                            ]);
-                        }
-                        break;
-                    }
-                    b.push([
-                        start,
-                        next,
-                        modelPath[modelIndex][2]
-                    ]);
-                    start = next;
-                    modelIndex--;
-                    if (modelIndex < 0) {
-                        modelIndex = modelPath.length - 1;
-                    }
-                }
-
                 var m = [];
                 b.forEach(function(line) {
                     m.push([line[0].slice(), line[1].slice()]);
                 });
-                debugs['b'] = format('M #{start} L #{lines} M #{end} m 0,-8 v 16', {
+                debugs['b'] = format('M #{start} L #{lines}', {
                     start: m[0],
                     end: end,
                     lines: m.slice(1).join(' ')
                 });
+
+                var synechiaA = 0;
+                a.forEach(function(item) {
+                    if (item[2] === 'synechia') {
+                        synechiaA += jmaths.pointToPoint(item[0], item[1]);
+                    }
+                });
+                var synechiaB = 0;
+                b.forEach(function(item) {
+                    if (item[2] === 'synechia') {
+                        synechiaB += jmaths.pointToPoint(item[0], item[1]);
+                    }
+                });
+                if (synechiaA >= synechiaB) {
+                    modelPath = a;
+                    cutModelPath = b;
+                }
+                else {
+                    modelPath = b;
+                    cutModelPath = a;
+                }
             }
 
             function cutSub(intersect, polygonIndex, modelIndex) {
