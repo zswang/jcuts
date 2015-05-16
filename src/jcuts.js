@@ -11,7 +11,7 @@
      * @param {Array} b 多边形 2 // [[1, 2], [3, 4], [4, 7]]
      * @return {number} 返回两个多边形的相似度，范围：0~1，为 1 表示完全相等
      */
-    function diffPolygon(width, height, a, b) {
+    function diffPolygon(a, b) {
         var canvas1 = document.createElement("canvas");
         var canvas2 = document.createElement("canvas");
         var minX = Infinity;
