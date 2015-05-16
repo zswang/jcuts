@@ -16,7 +16,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "jmaths": "0.0.4"
+    "jmaths": "0.0.5"
   },
   "devDependencies": {
     "jpaths": "0.0.8",
