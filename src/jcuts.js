@@ -211,12 +211,25 @@
     function createPaper(edges, x, y, radius) {
         var instance = {};
 
-        // flag => synechia: 粘黏, boundary: 边界, scar: 痕迹
+        /**
+         * 作为模型的路径
+         */
+        // flag => synechiaA: 粘黏 A, synechiaB: 粘黏 B, boundary: 边界, scar: 痕迹
         // [[x0, y0], [x1, y1], flag]]
         var modelPath = [];
 
+        /**
+         * 裁剪的路径
+         *
+         * @type {Array}
+         */
+        var cutModelPath = [];
+
         // init
-        var m = jmaths.regularPolygon(edges * 2, x, y, radius, -Math.PI * 0.5 - Math.PI / edges / 2);
+        var _allPolygon =
+            jmaths.regularPolygon(edges * 2, x, y, radius, -Math.PI * 0.5 - Math.PI / edges / 2);
+
+        var center = [x, y];
 
         // ======================
         // start           next
@@ -231,13 +244,17 @@
         //       center
         // =======================
 
-        var start = m[0];
-        var next = m[1];
-        var center = [x, y];
-
-        modelPath.push([start, center, 'synechia']);
-        modelPath.push([center, next, 'synechia']);
-        modelPath.push([next, start, 'boundary']);
+        function rebuild() {
+            var start = _allPolygon[0];
+            var next = _allPolygon[1];
+            modelPath = [];
+            cutModelPath = [];
+            modelPath.push([start, center, 'synechiaA']);
+            modelPath.push([center, next, 'synechiaB']);
+            modelPath.push([next, start, 'boundary']);
+        }
+        instance.rebuild = rebuild;
+        rebuild();
 
         /**
          * 获取完整绘制路径
@@ -265,16 +282,36 @@
             modelPath.forEach(function(line) {
                 m.push([line[0].slice(), line[1].slice()]);
             });
+            // console.log(JSON.stringify(m));
             return format('M #{start} L #{lines}', {
                 start: m[0][0],
                 lines: m.join(' ')
             });
         }
 
+        /**
+         * 获取模型多边形
+         *
+         * @return {Array} 返回多边形
+         */
         function getModelPolygon() {
             var result = [];
             modelPath.forEach(function(line) {
-                result.push(line[0].slice())
+                result.push(line[0].slice());
+            });
+            return result;
+        }
+        instance.getModelPolygon = getModelPolygon;
+
+        /**
+         * 获取模型多边形
+         *
+         * @return {Array} 返回多边形
+         */
+        function getCutPolygon() {
+            var result = [];
+            cutModelPath.forEach(function(line) {
+                result.push(line[0].slice());
             });
             return result;
         }
@@ -295,7 +332,6 @@
         }
         instance.getFullPath = getFullPath;
 
-        var cutModelPath = [];
         /**
          * 获取模型绘制路径
          *
@@ -506,17 +542,37 @@
                 });
 
                 var synechiaA = 0;
+                var countA = {};
                 a.forEach(function(item) {
-                    if (item[2] === 'synechia') {
+                    countA[item[2]] = true;
+                    if (item[2].indexOf('synechia') === 0) {
                         synechiaA += jmaths.pointToPoint(item[0], item[1]);
                     }
                 });
                 var synechiaB = 0;
+                var countB = {};
                 b.forEach(function(item) {
-                    if (item[2] === 'synechia') {
+                    countB[item[2]] = true;
+                    if (item[2].indexOf('synechia') === 0) {
                         synechiaB += jmaths.pointToPoint(item[0], item[1]);
                     }
                 });
+
+                if (countA['synechiaA'] && countA['synechiaB']) {
+                    if (!countB['synechiaA'] || !countB['synechiaB']) {
+                        modelPath = a;
+                        cutModelPath = b;
+                        return;
+                    }
+                }
+                else if (countB['synechiaA'] && countB['synechiaB']) {
+                    if (!countA['synechiaA'] || !countA['synechiaB']) {
+                        modelPath = b;
+                        cutModelPath = a;
+                        return;
+                    }
+                }
+
                 if (synechiaA >= synechiaB) {
                     modelPath = a;
                     cutModelPath = b;
@@ -590,14 +646,49 @@
      * @return {Object} 返回游戏实例
      */
     function createGame(options) {
+        options = options || {};
+        var container = typeof options.container === 'string' ?
+            document.querySelector(options.container) :
+            options.container || document.body;
+        var edges = options.edges || 6;
+        var onchange = options.onchange;
+
+        var instance = {};
+
+        var status = 'running'; // stop
+
+        var downPoint;
+        var points;
+
+        var paper = createPaper(edges, 250, 250, 200);
+
+        var paperBackgrund = jpaths.create({
+            parent: container,
+            stroke: 'red'
+        });
+        var paperHint = jpaths.create({
+            parent: container,
+            stroke: 'green'
+        });
+
+        function render() {
+            paperBackgrund.attr({
+                path: paper.getModelPath()
+            });
+        }
+        render();
         console.log('createGame');
         /**
          * 返回当前用户剪辑留下的形状
          *
          * @return {Array} 返回形状路径数据
          */
-        instance.getPolygon = function() {
-            console.log('getPolygon()');
+        instance.getShape = function() {
+            return {
+                edges: edges,
+                polygon: paper.getModelPolygon()
+            };
+            console.log('getShape()');
         };
 
         /**
@@ -606,6 +697,7 @@
          * @return {Array} 返回形状路径数据
          */
         instance.getCutPolygon = function() {
+            return paper.getCutPolygon();
             console.log('getCutPolygon()');
         };
 
@@ -614,42 +706,158 @@
          */
         instance.replay = function() {
             console.log('replay()');
+            status = 'running';
+            paper.rebuild();
+            doChange();
         };
+
+        function doChange() {
+            render();
+            if (typeof onchange === 'function') {
+                onchange.call(instance, {
+                    type: 'change'
+                });
+            }
+        }
 
         /**
          * 停止游戏
          */
         instance.stop = function() {
             console.log('stop()');
+            if (status === 'stop') {
+                return;
+            }
+            status = 'stop';
         };
 
+        var freed;
         /**
          * 释放游戏资源
          */
         instance.free = function() {
-            console.log('free()');
+            if (freed) {
+                return;
+            }
+            freed = true;
+            container.removeEventListener('touchmove', mouseMoveHandler);
+            container.removeEventListener('touchstart', mouseDownHandler);
+            container.removeEventListener('touchend', mouseUpHandler);
+
+            container.removeEventListener('mousedown', mouseDownHandler);
+            container.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+
+            paperBackgrund.free();
+            paperHint.free();
         };
+
+        function mouseMoveHandler(e) {
+            if (!downPoint) {
+                return;
+            }
+            var movePoint = e.type === 'mousemove' ?
+                [e.layerX, e.layerY] :
+                [
+                    e.targetTouches[0].pageX - canvas.offsetLeft,
+                    e.targetTouches[0].pageY - canvas.offsetTop
+                ];
+            points.push(movePoint);
+            paperHint.attr({
+                path: jcuts.format('M #{from} L #{lines}', {
+                    from: points[0],
+                    lines: points.slice(1)
+                })
+            });
+        }
+
+        function mouseDownHandler(e) {
+            downPoint = e.type === 'mousedown' ?
+                [e.layerX, e.layerY] :
+                [e.targetTouches[0].pageX - canvas.offsetLeft, e.targetTouches[0].pageY - canvas.offsetTop];
+            points = [downPoint];
+        }
+
+        function mouseUpHandler(e) {
+            if (!downPoint) {
+                return;
+            }
+            downPoint = null;
+            paperHint.attr({
+                path: ''
+            });
+
+            var ok = paper.cut(points);
+            if (!ok) {
+                return;
+            }
+            doChange();
+        }
+
+        container.addEventListener('touchmove', mouseMoveHandler);
+        container.addEventListener('touchstart', mouseDownHandler);
+        container.addEventListener('touchend', mouseUpHandler);
+
+        container.addEventListener('mousedown', mouseDownHandler);
+        container.addEventListener('mousemove', mouseMoveHandler);
+        document.addEventListener('mouseup', mouseUpHandler);
 
         return instance;
     }
+    exports.createGame = createGame;
 
     /**
      * 渲染剪纸效果
      *
-     * @param {Element|string} container 渲染容器，元素或选择器，得固定高宽
-     * @param {number} edges 边数，3~6
-     * @param {Array} polygon 多边形
+     * @param {Object} options 配置项
+     * @param {Element|string} options.container 容器，选择器或者元素对象
      * @return {Object} 渲染示例
      */
-    function renderPager(container, edges, polygon) {
-        console.log('renderPager');
+    function createRender(options) {
+        options = options || {};
+        var container = typeof options.container === 'string' ?
+            document.querySelector(options.container) :
+            options.container || document.body;
+        var instance = {};
+
+        var paperBackgrund = jpaths.create({
+            parent: container,
+            stroke: 'none',
+            fill: 'blue'
+        });
+        /**
+         * 渲染容器
+         *
+         * @param {Object} shape 图案
+         * @param {number} shape.edges 边数，3~6
+         * @param {Array} shape.polygon 多边形
+         */
+        function render(shape) {
+            var polygons = getCutPolygons(shape.edges, 250, 250, shape.polygon);
+            var path = '';
+            polygons.forEach(function(polygon) {
+                path += format('M #{start} L #{lines} Z', {
+                    start: polygon[0],
+                    lines: polygon.slice(1).join(' ')
+                });
+            });
+            paperBackgrund.attr({
+                path: path
+            });
+        }
+        instance.render = render;
+
+        console.log('createRender');
         /**
          * 释放游戏资源
          */
         instance.free = function() {
             console.log('free');
         };
+
+        return instance;
     }
+    exports.createRender = createRender;
 
     if (typeof define === 'function') {
         if (define.amd || define.cmd) {
