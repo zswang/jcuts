@@ -17,19 +17,75 @@
 </head>
 <body>
     <div id="canvas"></div>
+    <div id="log"></div>
 </body>
 <script>
 (function() {
-    var paper = jcuts.createPaper(5, 250, 250, 200);
+    var canvas = document.querySelector('#canvas');
+
+    var paper = jcuts.createPaper(6, 250, 250, 200);
 
     var paperCanvas = jpaths.create({
-        parent: 'canvas'
+        parent: canvas,
+        stroke: 'blue'
     });
 
+// console.log(paper.getFullPath)
     paperCanvas.attr({
         path: paper.getFullPath()
     });
 
+    var paperCanvasSub = jpaths.create({
+        parent: canvas,
+        stroke: 'red'
+    });
+
+    paperCanvasSub.attr({
+        path: paper.getModelPath()
+    });
+
+    var paperCanvasCut = jpaths.create({
+        parent: canvas,
+        stroke: 'green'
+    });
+
+    var log = document.querySelector('#log');
+
+    var downPoint;
+    var points;
+    canvas.addEventListener('mousedown', function(e) {
+        downPoint = [e.layerX, e.layerY];
+        points = [downPoint];
+    });
+
+    canvas.addEventListener('mousemove', function(e) {
+        if (!downPoint) {
+            return;
+        }
+        var movePoint = [e.layerX, e.layerY];
+        log.textContent = jcuts.format('#{layerX}, #{layerY}', e);
+        points.push(movePoint);
+        paperCanvasCut.attr({
+            path: jcuts.format('M #{from} L #{lines}', {
+                from: points[0],
+                lines: points.slice(1)
+            })
+        });
+
+    });
+
+    document.addEventListener('mouseup', function(e) {
+        if (!downPoint) {
+            return;
+        }
+
+        log.textContent = paper.cut(points);
+        paperCanvasCut.attr({
+            path: paper.getCutModelPath()
+        });
+
+        downPoint = null;
+    });
 })();
 </script>
 </html>
