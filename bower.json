@@ -1,0 +1,35 @@
+{
+  "name": "jcuts",
+  "version": "0.0.0",
+  "homepage": "https://github.com/zswang/jcuts",
+  "authors": "zswang",
+  "description": "剪纸工具",
+  "main": "jcuts.js",
+  "moduleType": [
+    "globals",
+    "node"
+  ],
+  "keywords": [
+    "cut",
+    "paper",
+    "papercut"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "jmaths": "0.0.4"
+  },
+  "devDependencies": {
+    "jpaths": "0.0.8",
+    "requirejs": "2.1.15"
+  },
+  "ignore": [
+    "tests",
+    "src",
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "app/components",
+    "test",
+    "tests"
+  ]
+}

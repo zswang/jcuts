@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>jcuts.js examples</title>
+    <script src="../src/jcuts.js"></script>
+    <script src="../bower_components/jmaths/jmaths.js"></script>
+    <script src="../bower_components/jpaths/jpaths.js"></script>
+    <style>
+#canvas {
+  border: solid 1px #ccc;
+  width: 500px;
+  height: 500px;
+  position: relative;
+  float: left;
+}
+    </style>
+</head>
+<body>
+    <div id="canvas"></div>
+</body>
+<script>
+(function() {
+    var paper = jcuts.createPaper(5, 250, 250, 200);
+
+    var paperCanvas = jpaths.create({
+        parent: 'canvas'
+    });
+
+    paperCanvas.attr({
+        path: paper.getFullPath()
+    });
+
+})();
+</script>
+</html>
