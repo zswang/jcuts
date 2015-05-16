@@ -93,12 +93,14 @@
             var angle;
             if (n === y) {
                 angle = 90;
-            }else {
+            }
+            else {
                 angle = Math.atan(Math.abs(m - x) / Math.abs(n - y)) * 180 / Math.PI;
             }
             if (m > x) {
                 angle = deltaAngle - angle;
-            }else {
+            }
+            else {
                 angle = deltaAngle + angle;
             }
             var arc = 2 * angle * Math.PI / 180;
@@ -314,6 +316,14 @@
         }
         instance.getCutModelPath = getCutModelPath;
 
+        /*<debug>*/
+        var debugs = {};
+        instance.debug = function(name) {
+            return debugs[name];
+        };
+        window.debugs = debugs;
+        /*</debug>*/
+
         /**
          * 剪切纸片
          *
@@ -322,7 +332,6 @@
          */
         function cut(polygon) {
             if (!polygon || polygon.length < 2) {
-                console.log('cut exit 1');
                 return;
             }
 
@@ -330,7 +339,6 @@
             var modelPolygon = getModelPolygon();
             if (ptInPolygon(polygon[0], modelPolygon) ||
                 ptInPolygon(polygon[polygon.length - 1], modelPolygon)) {
-                console.log('cut exit 2');
                 return;
             }
 
@@ -341,26 +349,181 @@
                     var lineB = [polygon[j - 1], polygon[j]];
                     if (jmaths.doubleLineIntersect(
                         lineA[0], lineA[1], lineB[0], lineB[1])) {
-                        console.log('cut exit 3');
                         return;
                     }
                 }
             }
 
             function doCut(startModelIndex, endModelIndex) {
+                var a = [];
+                var b = [];
+
                 var start = cutModelPath[0][0];
+                var end = cutModelPath[cutModelPath.length - 1][1];
 
-                // var a = [];
-                // var b = [cutModelPath[cutModelPath.length - 1]];
-                //
+                if (startModelIndex !== endModelIndex) {
+                    var modelIndex = startModelIndex;
+                    var temp = start;
+                    for (var i = 0; i < modelPath.length; i++) {
+                        next = modelPath[modelIndex][1];
+                        if (modelIndex === endModelIndex) {
+                            a.push([
+                                temp,
+                                end,
+                                modelPath[modelIndex][2]
+                            ]);
+                            for (var j = cutModelPath.length - 1; j >= 0; j--) {
+                                a.push([
+                                    cutModelPath[j][1],
+                                    cutModelPath[j][0],
+                                    cutModelPath[j][2]
+                                ]);
+                            }
+                            break;
+                        }
+                        a.push([
+                            temp,
+                            next,
+                            modelPath[modelIndex][2]
+                        ]);
+                        temp = next;
+                        modelIndex = (modelIndex + 1) % modelPath.length;
+                    }
 
-                for (var i = 0; i < modelPath.length; i++) {
+                    var modelIndex = startModelIndex;
+                    var temp = start;
+                    for (var i = 0; i < modelPath.length; i++) {
+                        next = modelPath[modelIndex][0];
+                        if (modelIndex === endModelIndex) {
+                            b.push([
+                                temp,
+                                end,
+                                modelPath[modelIndex][2]
+                            ]);
+                            for (var j = cutModelPath.length - 1; j >= 0; j--) {
+                                b.push([
+                                    cutModelPath[j][1],
+                                    cutModelPath[j][0],
+                                    cutModelPath[j][2]
+                                ]);
+                            }
+                            break;
+                        }
+                        b.push([
+                            temp,
+                            next,
+                            modelPath[modelIndex][2]
+                        ]);
+                        temp = next;
+                        modelIndex--;
+                        if (modelIndex < 0) {
+                            modelIndex = modelPath.length - 1;
+                        }
+                    }
+                }
+                else { // 在同一条边上
+                    if (jmaths.pointToPoint(modelPath[startModelIndex][0], start) <
+                        jmaths.pointToPoint(modelPath[startModelIndex][0], end)) {
+                        a.push([
+                            modelPath[startModelIndex][0],
+                            start,
+                            modelPath[startModelIndex][2]
+                        ]);
+                        for (var j = 0; j < cutModelPath.length; j++) {
+                            a.push(cutModelPath[j]);
+                        }
+                        a.push([
+                            end,
+                            modelPath[startModelIndex][1],
+                            modelPath[startModelIndex][2]
+                        ]);
+                        for (var i = 1; i < modelPath.length; i++) {
+                            a.push(modelPath[
+                                (startModelIndex + i) % modelPath.length]);
+                        }
 
-                    var modelIndex = (startModelIndex + i) % modelPath.length;
+                        for (var j = 0; j < cutModelPath.length; j++) {
+                            b.push(cutModelPath[j]);
+                        }
+                        b.push([
+                            end,
+                            start,
+                            modelPath[startModelIndex][2]
+                        ]);
+                    }
+                    else { // 逆方向
+                        a.push([
+                            start,
+                            modelPath[startModelIndex][1],
+                            modelPath[startModelIndex][2]
+                        ]);
+                        for (var i = 1; i < modelPath.length; i++) {
+                            a.push(modelPath[
+                                (startModelIndex + i) % modelPath.length]);
+                        }
+                        a.push([
+                            modelPath[startModelIndex][0],
+                            end,
+                            modelPath[startModelIndex][2]
+                        ]);
+                        for (var j = cutModelPath.length - 1; j >= 0; j--) {
+                            a.push([
+                                cutModelPath[j][1],
+                                cutModelPath[j][0],
+                                cutModelPath[j][2]
+                            ]);
+                        }
 
-                    // var model = modelPath[];
+                        b.push([
+                            end,
+                            start,
+                            modelPath[startModelIndex][2]
+                        ]);
+                        for (var j = 0; j < cutModelPath.length; j++) {
+                            b.push(cutModelPath[j]);
+                        }
+                    }
+                }
+                // console.log(JSON.stringify(a, null, '  '));
 
-                    // a.push();
+                var m = [];
+                a.forEach(function(line) {
+                    m.push([line[0].slice(), line[1].slice()]);
+                });
+                debugs['a'] = format('M #{start} L #{lines} Z', {
+                    start: m[0],
+                    lines: m.slice(1).join(' '),
+                });
+
+                var m = [];
+                b.forEach(function(line) {
+                    m.push([line[0].slice(), line[1].slice()]);
+                });
+                debugs['b'] = format('M #{start} L #{lines}', {
+                    start: m[0],
+                    end: end,
+                    lines: m.slice(1).join(' ')
+                });
+
+                var synechiaA = 0;
+                a.forEach(function(item) {
+                    if (item[2] === 'synechia') {
+                        synechiaA += jmaths.pointToPoint(item[0], item[1]);
+                    }
+                });
+                var synechiaB = 0;
+                b.forEach(function(item) {
+                    if (item[2] === 'synechia') {
+                        synechiaB += jmaths.pointToPoint(item[0], item[1]);
+                    }
+                });
+                if (synechiaA >= synechiaB) {
+                    modelPath = a;
+                    cutModelPath = b;
+                }
+                else {
+                    modelPath = b;
+                    cutModelPath = a;
                 }
             }
 
@@ -484,7 +647,7 @@
          * 释放游戏资源
          */
         instance.free = function() {
-           console.log('free');
+            console.log('free');
         };
     }
 
