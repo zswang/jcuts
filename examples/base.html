@@ -30,9 +30,9 @@
         stroke: 'blue'
     });
 
-    paperCanvas.attr({
-        path: paper.getFullPath()
-    });
+    // paperCanvas.attr({
+    //     path: paper.getFullPath()
+    // });
 
     var paperCanvasSub = jpaths.create({
         parent: canvas,
@@ -46,6 +46,16 @@
     var paperCanvasCut = jpaths.create({
         parent: canvas,
         stroke: 'green'
+    });
+    var paperCanvasCutA = jpaths.create({
+        parent: canvas,
+        stroke: '#00ff00',
+        fill: '#00ff00'
+    });
+    var paperCanvasCutB = jpaths.create({
+        parent: canvas,
+        stroke: '#ff00ff',
+        fill: '#ff00ff'
     });
 
     var log = document.querySelector('#log');
@@ -85,8 +95,13 @@
             return;
         }
         log.textContent = 'ok';
-        paperCanvasCut.attr({
-            path: paper.getCutModelPath()
+        paperCanvasCutA.attr({
+            // path: paper.getCutModelPath()
+            path: paper.debug('a')
+        });
+
+        paperCanvasCutB.attr({
+            path: paper.debug('b')
         });
     });
 })();

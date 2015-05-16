@@ -93,12 +93,14 @@
             var angle;
             if (n === y) {
                 angle = 90;
-            }else {
+            }
+            else {
                 angle = Math.atan(Math.abs(m - x) / Math.abs(n - y)) * 180 / Math.PI;
             }
             if (m > x) {
                 angle = deltaAngle - angle;
-            }else {
+            }
+            else {
                 angle = deltaAngle + angle;
             }
             var arc = 2 * angle * Math.PI / 180;
@@ -310,6 +312,12 @@
         }
         instance.getCutModelPath = getCutModelPath;
 
+        var debugs = {};
+        instance.debug = function(name) {
+            return debugs[name];
+        };
+        window.debugs = debugs;
+
         /**
          * 剪切纸片
          *
@@ -345,19 +353,86 @@
 
             function doCut(startModelIndex, endModelIndex) {
                 var start = cutModelPath[0][0];
-
-                // var a = [];
-                // var b = [cutModelPath[cutModelPath.length - 1]];
-                //
-
+                var end = cutModelPath[cutModelPath.length - 1][1];
+                var a = [];
+                var modelIndex = startModelIndex;
                 for (var i = 0; i < modelPath.length; i++) {
-
-                    var modelIndex = (startModelIndex + i) % modelPath.length;
-
-                    // var model = modelPath[];
-
-                    // a.push();
+                    console.log('a', modelIndex);
+                    next = modelPath[modelIndex][1];
+                    if (modelIndex === endModelIndex) {
+                        a.push([
+                            start,
+                            end,
+                            modelPath[modelIndex][2]
+                        ]);
+                        for (var j = cutModelPath.length - 1; j >= 0; j--) {
+                            a.push([
+                                cutModelPath[j][1],
+                                cutModelPath[j][0],
+                                cutModelPath[j][2]
+                            ]);
+                        }
+                        break;
+                    }
+                    a.push([
+                        start,
+                        next,
+                        modelPath[modelIndex][2]
+                    ]);
+                    start = next;
+                    modelIndex = (modelIndex + 1) % modelPath.length;
                 }
+                var m = [];
+                a.forEach(function(line) {
+                    m.push([line[0].slice(), line[1].slice()]);
+                });
+                debugs['a'] = format('M #{start} L #{lines} Z', {
+                    start: m[0],
+                    lines: m.slice(1).join(' '),
+                });
+
+                var start = cutModelPath[0][0];
+                var end = cutModelPath[cutModelPath.length - 1][1];
+                var b = [];
+                var modelIndex = startModelIndex;
+                for (var i = 0; i < modelPath.length; i++) {
+                    next = modelPath[modelIndex][0];
+                    if (modelIndex === endModelIndex) {
+                        b.push([
+                            start,
+                            end,
+                            modelPath[modelIndex][2]
+                        ]);
+                        for (var j = cutModelPath.length - 1; j >= 0; j--) {
+                            b.push([
+                                cutModelPath[j][1],
+                                cutModelPath[j][0],
+                                cutModelPath[j][2]
+                            ]);
+                        }
+                        break;
+                    }
+                    b.push([
+                        start,
+                        next,
+                        modelPath[modelIndex][2]
+                    ]);
+                    start = next;
+                    modelIndex--;
+                    if (modelIndex < 0) {
+                        modelIndex = modelPath.length - 1;
+                    }
+                }
+
+                var m = [];
+                b.forEach(function(line) {
+                    m.push([line[0].slice(), line[1].slice()]);
+                });
+                debugs['b'] = format('M #{start} L #{lines} M #{end} m 0,-8 v 16', {
+                    start: m[0],
+                    end: end,
+                    lines: m.slice(1).join(' ')
+                });
             }
 
             function cutSub(intersect, polygonIndex, modelIndex) {
@@ -480,7 +555,7 @@
          * 释放游戏资源
          */
         instance.free = function() {
-           console.log('free');
+            console.log('free');
         };
     }
 
