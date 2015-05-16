@@ -76,7 +76,44 @@
      * @return {Array} 选择和映射后的多边形数组 [[[x, y], [x1, y1], ...], [[x, y], [x1, y1], ...] ...]
      */
     function getCutPolygons(edges, x, y, polygon) {
+        //计算与之对称的多边形的端点集
+        var newPolygon = [];
+        var deltaAngle = 360 / (4 * edges);
+        for (var i = 0; i < polygon.length; i++) {
+            var m = polygon[i][0];
+            var n = polygon[i][1];
+            var angle;
+            if (n === y) {
+                angle = 90;
+            }else {
+                angle = Math.atan(Math.abs(m - x) / Math.abs(n - y)) * 180 / Math.PI;
+            }
+            if (m > x) {
+                angle = deltaAngle - angle;
+            }else {
+                angle = deltaAngle + angle;
+            }
+            var arc = 2 * angle * Math.PI / 180;
+            newPolygon.push(jmaths.rotatePoint(polygon[i], [x, y], arc));
+        }
 
+        //将两个相互对称的端点集旋转相应的角度
+        var polygons = [];
+        polygons.push(polygon);
+        polygons.push(newPolygon);
+
+        for (var i = 1; i < edges; i++) {
+            var arc = (i * 360 / edges) * Math.PI / 180;
+            var rPolygon = [];
+            var rNewPolygon = [];
+            for (var j = 0; j < polygon.length; j++) {
+                rPolygon.push(jmaths.rotatePoint(polygon[j], [x, y], arc));
+                rNewPolygon.push(jmaths.rotatePoint(newPolygon[j], [x, y], arc));
+            }
+            polygons.push(rPolygon);
+            polygons.push(rNewPolygon);
+        }
+        return polygons;
     }
 
     /**
