@@ -1,6 +1,6 @@
 {
   "name": "jcuts",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "剪纸工具",
   "main": "src/jcuts.js",
   "repository": {
