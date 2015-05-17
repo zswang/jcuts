@@ -20,12 +20,14 @@
   "homepage": "https://github.com/zswang/jcuts",
   "devDependencies": {
     "jdists": "0.7.6",
+    "uglify-js": "2.4.15",
     "mocha": "2.0.1",
     "should": "4.1.0",
     "jshint": "2.5.8"
   },
   "scripts": {
+    "dist": "jdists jcuts.jdists.js -o jcuts.js && uglifyjs jcuts.js -o jcuts.min.js -p 5 -c -m",
     "test": "mocha -R spec",
-    "lint": "jshint src/**/*.js"
+    "lint": "jshint src/*.js"
   }
 }
