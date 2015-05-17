@@ -50,7 +50,7 @@
 </body>
 <script>
 (function() {
-    function polygonDrop(vertex, color) {
+    function polygonDrop(vertex, color, container) {
       var canvas = document.createElement("canvas");
       var minX = Infinity;
       var minY = Infinity;
@@ -74,6 +74,9 @@
       paperWrap.className += 'paper-wrap ';
       paperWrap.className += 'fall ';
       var body = document.getElementsByTagName('body')[0];
+      if (container) {
+        body = container;
+      }
       var rect = document.body.getBoundingClientRect();
       var top = rect.top + minY;
       var left = rect.left + minX;
@@ -103,6 +106,9 @@
         paperWrap.appendChild(outerWrap);
       }
       body.appendChild(paperWrap);
+      setTimeout(function () {
+        body.removeChild(paperWrap);
+      }, 2800);
     }
     function drawPolygon(canvas, vertex, offsetX, offsetY, color) {
       var offsetX = offsetX || 0;
