@@ -1,6 +1,6 @@
 {
   "name": "jcuts",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "剪纸工具",
   "main": "src/jcuts.js",
   "repository": {
@@ -23,10 +23,13 @@
     "uglify-js": "2.4.15",
     "mocha": "2.0.1",
     "should": "4.1.0",
-    "jshint": "2.5.8"
+    "jshint": "2.5.8",
+    "clean-css": "3.0.2"
   },
   "scripts": {
-    "dist": "jdists jcuts.jdists.js -o jcuts.js && uglifyjs jcuts.js -o jcuts.min.js -p 5 -c -m",
+    "_uglify": "uglifyjs jcuts.js -o jcuts.min.js -p 5 -c -m",
+    "_clean_css": "cleancss -o jcuts.min.css src/jcuts.css",
+    "dist": "jdists jcuts.jdists.js -o jcuts.js && npm run _uglify && npm run _clean_css",
     "test": "mocha -R spec",
     "lint": "jshint src/*.js"
   }
