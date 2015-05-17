@@ -125,6 +125,7 @@
         }
         return polygons;
     }
+    exports.getCutPolygons = getCutPolygons;
 
     /**
      * 在canvas上根据多边形端点数组绘制多边形
@@ -132,11 +133,12 @@
      *
      * @param {canvas DOM element} canvas 画布元素
      * @param {Array} vertex 多边形端点数组 // [[1, 2], [3, 4], [4, 7]]
-     * @param {number} offsetX x轴偏移量
-     * @param {number} offsetY y轴偏移量
+     * @param {number} offsetX x轴偏移量，默认为0
+     * @param {number} offsetY y轴偏移量，默认为0
+     * @param {string} color 多边形填充色，默认为黑色
      */
 
-    function drawPolygon(canvas, vertex, offsetX, offsetY) {
+    function drawPolygon(canvas, vertex, offsetX, offsetY, color) {
         var offsetX = offsetX || 0;
         var offsetY = offsetY || 0;
         var context = canvas.getContext('2d');
@@ -157,6 +159,10 @@
             }
         }
         context.lineTo(beginX, beginY);
+        context.closePath();
+        if (color) {
+            context.fillStyle = color;
+        }
         context.fill();
     }
 
@@ -184,7 +190,67 @@
         }
         return diffPixelNum / baseNum;
     }
-    exports.diffPolygon = diffPolygon;
+
+    /**
+     * 多边形掉落效果
+     *
+     * @param {Array} vertex 多边形端点集
+     * @param {string} color 多边形填充色
+     */
+    function polygonDrop(vertex, color) {
+        //绘制多边形
+        var canvas = document.createElement("canvas");
+        var minX = Infinity;
+        var minY = Infinity;
+        var maxX = 0;
+        var maxY = 0;
+        for (var i = 0; i < vertex.length; i++) {
+            var point = vertex[i];
+            minX = (minX > point[0]) ? point[0] : minX;
+            minY = (minY > point[1]) ? point[1] : minY;
+            maxX = (maxX < point[0]) ? point[0] : maxX;
+            maxY = (maxY < point[1]) ? point[1] : maxY;
+        }
+        var width = maxX - minX + 1;
+        var height = maxY - minY + 1;
+        canvas.width = width;
+        canvas.height = height;
+        drawPolygon(canvas, vertex, minX, minY, color);
+        //添加掉落效果
+        var paperWrap = document.createElement('div');
+        paperWrap.className += 'paper-wrap ';
+        paperWrap.className += 'fall ';
+        var body = document.getElementsByTagName('body')[0];
+        var rect = document.body.getBoundingClientRect();
+        var top = rect.top + minY;
+        var left = rect.left + minX;
+        paperWrap.style.width = width + "px";
+        paperWrap.style.height = height + "px";
+        paperWrap.style.top = top + "px";
+        paperWrap.style.left = left + "px";
+        var area = width * height;
+        if (area < 1600) {
+            var innerWrap = document.createElement('div');
+            innerWrap.className += 'rotate ';
+            innerWrap.appendChild(canvas);
+            paperWrap.appendChild(innerWrap);
+        } else if (area > 10000) {
+            var innerWrap = document.createElement('div');
+            innerWrap.className += 'sway3d ';
+            innerWrap.appendChild(canvas);
+            paperWrap.appendChild(innerWrap);
+        } else {
+            var innerWrap = document.createElement('div');
+            innerWrap.className += 'rotate-slow ';
+            innerWrap.appendChild(canvas);
+            var outerWrap = document.createElement('div');
+            outerWrap.className += 'sway2d ';
+            outerWrap.appendChild(innerWrap);
+            paperWrap.appendChild(outerWrap);
+        }
+        body.appendChild(paperWrap);
+    }
+    exports.polygonDrop = polygonDrop;
 
     /**
      * 格式化函数
