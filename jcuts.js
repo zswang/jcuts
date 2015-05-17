@@ -1262,6 +1262,9 @@
      * @param {Object} options 配置项
      * @param {Element|string} options.container 容器，选择器或者元素对象
      * @param {=number} options.edges 边数，3~6，默认 6
+     * @param {=string} options.stroke 描边颜色
+     * @param {=string} options.fill 填充颜色
+     * @param {=string} options.cutStroke 切线描边颜色
      * @param {=Function} options.onchange 用户剪切纸张
      * @return {Object} 返回游戏实例
      */
@@ -1279,11 +1282,13 @@
         var paper = createPaper(edges, 250, 250, 200);
         var paperBackgrund = jpaths.create({
             parent: container,
-            stroke: 'red'
+            stroke: options.stroke || 'black',
+            fill: options.fill || 'none'
         });
         var paperHint = jpaths.create({
             parent: container,
-            stroke: 'green'
+            stroke: options.cutStroke || 'green',
+            strokeWidth: 2
         });
         function render() {
             paperBackgrund.attr({
@@ -1413,6 +1418,8 @@
      *
      * @param {Object} options 配置项
      * @param {Element|string} options.container 容器，选择器或者元素对象
+     * @param {=string} options.stroke 描边颜色
+     * @param {=string} options.fill 填充颜色
      * @return {Object} 渲染示例
      */
     function createRender(options) {
@@ -1423,8 +1430,8 @@
         var instance = {};
         var paperBackgrund = jpaths.create({
             parent: container,
-            stroke: 'none',
-            fill: 'blue'
+            stroke: options.stroke || 'none',
+            fill: options.fill || 'yellow'
         });
         /**
          * 渲染容器
@@ -1447,11 +1454,16 @@
             });
         }
         instance.render = render;
-        console.log('createRender');
+        var freed;
         /**
          * 释放游戏资源
          */
         instance.free = function() {
+            if (freed) {
+                return;
+            }
+            freed = true;
+            paperBackgrund.free();
             console.log('free');
         };
         return instance;
