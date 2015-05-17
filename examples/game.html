@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>jcuts.js examples</title>
+
+    <script src="../src/jcuts.js"></script>
+    <script src="../bower_components/jmaths/jmaths.js"></script>
+    <script src="../bower_components/jpaths/jpaths.js"></script>
+
+    <!-- <script src="../jcuts.min.js"></script> -->
+    <style>
+#canvas, #canvas1 {
+  border: solid 1px #ccc;
+  width: 500px;
+  height: 300px;
+}
+#canvas1 {
+  width: 500px;
+  height: 500px;
+}
+    </style>
+</head>
+<body>
+    <div id="canvas"></div>
+    <div id="canvas1"></div>
+    <div id="tool"><button>replay</button></div>
+</body>
+<script>
+(function() {
+    var pager = jcuts.createRender({
+        container: '#canvas1'
+    });
+
+    var game = jcuts.createGame({
+        edges: 5,
+        container: '#canvas',
+        fill: '#ff00ff',
+        storke: 'blue',
+        onchange: function() {
+            var shape = this.getShape();
+            pager.render(shape);
+            console.log(JSON.stringify(shape));
+        }
+    });
+
+    document.querySelector('button').onclick = function() {
+        game.replay();
+    };
+})();
+</script>
+</html>

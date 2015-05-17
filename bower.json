@@ -1,6 +1,6 @@
 {
   "name": "jcuts",
-  "version": "0.0.0",
+  "version": "0.0.3",
   "homepage": "https://github.com/zswang/jcuts",
   "authors": "zswang",
   "description": "剪纸工具",
@@ -16,15 +16,14 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "jmaths": "0.0.5"
+    "jmaths": "0.0.7",
+    "jpaths": "0.0.8"
   },
   "devDependencies": {
-    "jpaths": "0.0.8",
     "requirejs": "2.1.15"
   },
   "ignore": [
     "tests",
-    "src",
     "**/.*",
     "node_modules",
     "bower_components",
