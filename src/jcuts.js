@@ -873,7 +873,7 @@
             if (!ok) {
                 return;
             }
-            polygonDrop(paper.getCutPolygon(), options.fill || 'none');
+            polygonDrop(paper.getCutPolygon(), options.fill || 'none', container);
             doChange();
         }
 
