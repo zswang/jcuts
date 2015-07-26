@@ -17,7 +17,7 @@
   "license": "MIT",
   "dependencies": {
     "jmaths": "0.0.7",
-    "jpaths": "0.0.8"
+    "jpaths": "0.0.9"
   },
   "devDependencies": {
     "requirejs": "2.1.15"

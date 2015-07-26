@@ -293,6 +293,7 @@
       return json && (key in json) ? json[key] : "";
     });
   }
+  exports.format = format;
   /**
    * 解析路径字符串中的详情
    *
@@ -397,13 +398,13 @@
         break;
       case 'svg':
         div = document.createElement('div');
-        div.innerHTML = format( /*#*/ "\n<svg width=100% height=100% xmlns=\"http://www.w3.org/2000/svg\">\n  <path fill=\"#{fill}\"\n    fill-rule=\"evenodd\"\n    stroke-linejoin=\"round\"\n    fill-opacity=\"#{fillOpacity}\"\n    stroke=\"#{stroke}\"\n    stroke-opacity=\"#{strokeOpacity}\"\n    stroke-width=\"#{strokeWidth}\" d=\"#{path}\"\n</svg>\n", this);
-        this.elementPath = div.lastChild.lastChild;
+        div.innerHTML = format( /*#*/ "\n<svg width=100% height=100% xmlns=\"http://www.w3.org/2000/svg\">\n  <path fill=\"#{fill}\"\n    fill-rule=\"evenodd\"\n    stroke-linejoin=\"round\"\n    fill-opacity=\"#{fillOpacity}\"\n    stroke=\"#{stroke}\"\n    stroke-opacity=\"#{strokeOpacity}\"\n    stroke-width=\"#{strokeWidth}\" d=\"#{path}\"/>\n</svg>\n", this);
+        this.elementPath = div.querySelector('path');
         if (parentInfo) {
           this.element = parentInfo.element;
           this.element.appendChild(this.elementPath);
         } else {
-          this.element = div.lastChild;
+          this.element = div.querySelector('svg');
           parentList.push({
             parent: this.parent,
             element: this.element
@@ -521,7 +522,7 @@
    * @param {string} name
    * @return {Any} 返回该属性值
    */
-  Path.prototype.attr = function(name, value) {
+  Path.prototype.attr = function(name, value, batch) {
     if (this.freed) {
       return;
     }
@@ -694,10 +695,10 @@
   function create(options) {
     return new Path(options);
   }
+  exports.create = create;
   if (renderMode === 'vml') {
     document.createStyleSheet().cssText = format( /*#*/ "\n.#{this}_vml {\n  behavior: url(#default#VML);\n}\n.#{this}_path_shape {\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: 0;\n  left: 0;\n  top: 0;\n  position: absolute;\n}\n.#{this}_path_panel {\n  width: 100%;\n  height: 100%;\n  overflow: hidden;\n  padding: 0;\n  margin: 0;\n  position: relative;\n}\n", exportName);
   }
-  exports.create = create;
   if (typeof define === 'function') {
     if (define.amd || define.cmd) {
       define(function() {
@@ -756,6 +757,23 @@
         return similarity;
     }
     exports.diffPolygon = diffPolygon;
+    /**
+     * 比较两个图形的相似度
+     *
+     * @param {Object} a 图形 1 // [[1, 2], [3, 4], [4, 5]]
+     * @param {Object} b 图形 2 // [[1, 2], [3, 4], [4, 7]]
+     * @return {number} 返回两个多边形的相似度，范围：0~1，为 1 表示完全相等
+     */
+    function diffShape(a, b) {
+        if (a.radius > b.radius) {
+            var t = a;
+            a = b;
+            b = t;
+        }
+        return diffPolygon(a.polygon,
+            coordinateTransformation(b.polygon, a.base, b.base));
+    }
+    exports.diffShape = diffShape;
     /**
      * 获得完整剪纸的多边形
      *
@@ -868,70 +886,83 @@
         }
         return diffPixelNum / baseNum;
     }
+    var drops = [];
+    var dropMax = 10;
+    var dropIndex = 0;
     /**
      * 多边形掉落效果
      *
-     * @param {Array} vertex 多边形端点集
-     * @param {string} color 多边形填充色
+     * @param {Array} shape 多边形端点集
      */
-    function polygonDrop(vertex, color, container) {
-        //绘制多边形
-        var canvas = document.createElement("canvas");
-        var minX = Infinity;
-        var minY = Infinity;
-        var maxX = 0;
-        var maxY = 0;
-        for (var i = 0; i < vertex.length; i++) {
-            var point = vertex[i];
-            minX = (minX > point[0]) ? point[0] : minX;
-            minY = (minY > point[1]) ? point[1] : minY;
-            maxX = (maxX < point[0]) ? point[0] : maxX;
-            maxY = (maxY < point[1]) ? point[1] : maxY;
+    function polygonDrop(polygon, fill, container) {
+        if (!drops[dropIndex]) {
+            var paperWrap = document.createElement('div');
+            var innerWrap = document.createElement('div');
+            paperWrap.appendChild(innerWrap);
+            container.appendChild(paperWrap);
+            drops[dropIndex] = {
+                paperWrap: paperWrap,
+                innerWrap: innerWrap,
+                jpaths: jpaths.create({
+                    parent: innerWrap,
+                    stroke: 'none'
+                })
+            };
         }
-        var width = maxX - minX + 1;
-        var height = maxY - minY + 1;
-        canvas.width = width;
-        canvas.height = height;
-        drawPolygon(canvas, vertex, minX, minY, color);
-        //添加掉落效果
-        var paperWrap = document.createElement('div');
-        paperWrap.className += 'paper-wrap ';
-        paperWrap.className += 'fall ';
-        var body = document.getElementsByTagName('body')[0];
-        if (container) {
-            body = container;
+        var rect = {
+            left: polygon[0][0],
+            right: polygon[0][0],
+            top: polygon[0][1],
+            bottom: polygon[0][1]
+        };
+        for (var i = 1; i < polygon.length; i++) {
+            rect.left = Math.min(rect.left, polygon[i][0]);
+            rect.right = Math.max(rect.right, polygon[i][0]);
+            rect.top = Math.min(rect.top, polygon[i][1]);
+            rect.bottom = Math.max(rect.bottom, polygon[i][1]);
         }
-        var rect = document.body.getBoundingClientRect();
-        var top = rect.top + minY;
-        var left = rect.left + minX;
-        paperWrap.style.width = width + "px";
-        paperWrap.style.height = height + "px";
-        paperWrap.style.top = top + "px";
-        paperWrap.style.left = left + "px";
+        var points = polygon.map(function(item) {
+            return [item[0] - rect.left, item[1] - rect.top];
+        });
+        var drop = drops[dropIndex];
+        drop.jpaths.attr({
+            path: jcuts.format('M #{from} L #{lines}', {
+                from: points[0],
+                lines: points.slice(1)
+            }),
+            fill: fill
+        });
+        var width = (rect.right - rect.left);
+        var height = (rect.bottom - rect.top);
         var area = width * height;
         if (area < 1600) {
-            var innerWrap = document.createElement('div');
-            innerWrap.className += 'rotate ';
-            innerWrap.appendChild(canvas);
-            paperWrap.appendChild(innerWrap);
-        } else if (area > 10000) {
-            var innerWrap = document.createElement('div');
-            innerWrap.className += 'sway3d ';
-            innerWrap.appendChild(canvas);
-            paperWrap.appendChild(innerWrap);
-        } else {
-            var innerWrap = document.createElement('div');
-            innerWrap.className += 'rotate-slow ';
-            innerWrap.appendChild(canvas);
-            var outerWrap = document.createElement('div');
-            outerWrap.className += 'sway2d ';
-            outerWrap.appendChild(innerWrap);
-            paperWrap.appendChild(outerWrap);
+            drop.innerWrap.className = 'inner-wrap rotate';
+            drop.paperWrap.className = 'paper-wrap fall';
         }
-        body.appendChild(paperWrap);
-        setTimeout(function () {
-            body.removeChild(paperWrap);
-        }, 2800);
+        else if (area < 5000) {
+            drop.innerWrap.className = 'inner-wrap sway2d';
+            drop.paperWrap.className = 'paper-wrap fall';
+        }
+        else if (area > 10000) {
+            drop.innerWrap.className = 'inner-wrap sway3d';
+            drop.paperWrap.className = 'paper-wrap fall';
+        }
+        else {
+            drop.innerWrap.className = 'inner-wrap rotate-slow';
+            drop.paperWrap.className = 'paper-wrap fall';
+        }
+        drop.paperWrap.style.display = 'none';
+        drop.paperWrap.style.width = width + 'px';
+        drop.paperWrap.style.height = height + 'px';
+        drop.paperWrap.style.left = rect.left + 'px';
+        drop.paperWrap.style.top = rect.top + 'px';
+        drop.paperWrap.style.display = '';
+        setTimeout((function(element) {
+            return function() {
+                element.style.display = 'none';
+            };
+        })(drop.paperWrap), 2800);
+        dropIndex = (dropIndex + 1) % dropMax;
     }
     exports.polygonDrop = polygonDrop;
     /**
@@ -960,7 +991,6 @@
      */
     function coordinateTransformation(polygon, fromBase, toBase) {
         var result = [];
-        console.log(JSON.stringify(polygon));
         polygon.forEach(function(item) {
             var point = item.slice();
             var t = fromBase.radius / toBase.radius;
@@ -970,7 +1000,6 @@
             point[1] = toBase.center[1] + Math.sin(a) * d;
             result.push(point);
         });
-        console.log(JSON.stringify(result));
         return result;
     }
     exports.coordinateTransformation = coordinateTransformation;
@@ -1055,7 +1084,6 @@
             modelPath.forEach(function(line) {
                 m.push([line[0].slice(), line[1].slice()]);
             });
-            // console.log(JSON.stringify(m));
             return format('M #{start} L #{lines}', {
                 start: m[0][0],
                 lines: m.join(' ')
@@ -1075,6 +1103,32 @@
         }
         instance.getModelPolygon = getModelPolygon;
         /**
+         * 获取数据
+         */
+        instance.getData = function() {
+            return {
+                edges: edges,
+                base: {
+                    center: center,
+                    radius: radius
+                },
+                modelPath: modelPath,
+                cutModelPath: cutModelPath
+            };
+        };
+        /**
+         * 设置数据
+         *
+         * @param {Object} data 剪纸数据
+         */
+        instance.setData = function(data) {
+            edges = data.edges;
+            center = data.base.center;
+            radius = data.base.radius;
+            modelPath = data.modelPath;
+            cutModelPath = data.cutModelPath;
+        };
+        /**
          * 获取模型多边形
          *
          * @return {Array} 返回多边形
@@ -1092,20 +1146,18 @@
          *
          * @return {string} 返回模型绘制路径
          */
-        function getCutModelPath() {
+        function getCutPath() {
             var m = [];
             cutModelPath.forEach(function(line) {
                 m.push([line[0].slice(), line[1].slice()]);
             });
-            return format('M #{start} L #{lines}' +
-                'M #{start} m -5,0 h 10 M #{start} m 0,-5 v 10' +
-                'M #{end} m -8,0 h 16 M #{end} m 0,-8 v 16', {
-                    start: m[0][0],
-                    end: m[m.length - 1][1],
-                    lines: m.join(' ')
-                });
+            return format('M #{start} L #{lines} Z', {
+                start: m[0][0],
+                end: m[m.length - 1][1],
+                lines: m.join(' ')
+            });
         }
-        instance.getCutModelPath = getCutModelPath;
+        instance.getCutPath = getCutPath;
         /**
          * 剪切纸片
          *
@@ -1348,7 +1400,6 @@
                         start, next, line[0], line[1]);
                     if (intersect) { // 出现相交
                         cutSub(intersect, i, j);
-                        // console.log(JSON.stringify(polygon));
                         return true;
                     }
                 }
@@ -1383,40 +1434,70 @@
         var status = 'running'; // stop
         var downPoint;
         var points;
-        var center = [container.clientWidth / 2, container.clientHeight / 2 * 1.8];
-        var radius = Math.min(container.clientWidth, container.clientHeight) * 0.8;
+        var center = options.center || [container.clientWidth / 2, container.clientHeight / 2 * 1.8];
+        var radius = options.radius || Math.min(container.clientWidth, container.clientHeight) * 0.8;
         var paper = createPaper(edges, center, radius);
+        var fill = options.fill || 'none';
         var paperBackgrund = jpaths.create({
             parent: container,
             stroke: options.stroke || 'black',
-            fill: options.fill || 'none'
+            fill: fill
         });
+        var cutStroke = options.cutStroke || 'green';
         var paperHint = jpaths.create({
             parent: container,
-            stroke: options.cutStroke || 'green',
+            stroke: cutStroke,
             strokeWidth: 2
         });
         function render() {
             paperBackgrund.attr({
+                fill: fill,
                 path: paper.getModelPath()
+            });
+            paperHint.attr({
+                stroke: cutStroke
             });
         }
         render();
-        console.log('createGame');
         /**
          * 返回当前用户剪辑留下的形状
          *
          * @return {Array} 返回形状路径数据
          */
         instance.getShape = function() {
-            console.log('getShape()');
             return {
                 edges: edges,
                 base: {
                     center: center,
                     radius: radius
                 },
+                fill: fill,
                 polygon: paper.getModelPolygon()
+            };
+        };
+        instance.getData = function() {
+            var result = paper.getData();
+            result.fill = fill;
+            return result;
+        };
+        instance.setData = function(data) {
+            paper.setData(data);
+            fill = data.fill || fill;
+            doChange();
+        };
+        /**
+         * 返回当前用户剪辑留下的形状
+         *
+         * @return {Array} 返回形状路径数据
+         */
+        instance.getCutShape = function() {
+            return {
+                edges: edges,
+                base: {
+                    center: center,
+                    radius: radius
+                },
+                polygon: paper.getCutPolygon()
             };
         };
         /**
@@ -1425,14 +1506,12 @@
          * @return {Array} 返回形状路径数据
          */
         instance.getCutPolygon = function() {
-            console.log('getCutPolygon()');
             return paper.getCutPolygon();
         };
         /**
          * 开始游戏
          */
         instance.replay = function() {
-            console.log('replay()');
             status = 'running';
             paper.rebuild();
             doChange();
@@ -1449,7 +1528,6 @@
          * 停止游戏
          */
         instance.stop = function() {
-            console.log('stop()');
             if (status === 'stop') {
                 return;
             }
@@ -1473,29 +1551,49 @@
             paperBackgrund.free();
             paperHint.free();
         };
+        instance.setAttributes = function(attrs) {
+            if (freed) {
+                return;
+            }
+            fill = attrs.fill || fill;
+            paperBackgrund.attr({
+                fill: fill
+            });
+        };
         function mouseMoveHandler(e) {
             if (!downPoint) {
                 return;
             }
             var movePoint = e.type === 'mousemove' ?
-                [e.pageX - this.offsetLeft, e.pageY - this.offsetTop] :
-                [e.targetTouches[0].pageX - this.offsetLeft, e.targetTouches[0].pageY - this.offsetTop];
+                [e.offsetX, e.offsetY] :
+                [
+                    e.targetTouches[0].pageX - this.offsetLeft,
+                    e.targetTouches[0].pageY - this.offsetTop
+                ];
             points.push(movePoint);
-            paperHint.attr({
-                path: jcuts.format('M #{from} L #{lines}', {
-                    from: points[0],
-                    lines: points.slice(1)
-                })
-            });
+            if (points.length > 2) {
+                paperHint.attr({
+                    path: jcuts.format('M #{from} L #{lines}', {
+                        from: points[0],
+                        lines: points.slice(1)
+                    })
+                });
+            }
+            else {
+                paperHint.attr({
+                    path: ''
+                });
+            }
         }
         function mouseDownHandler(e) {
             if (status !== 'running') {
                 return;
             }
-            downPoint = e.type === 'mousedown' ?
-                [e.pageX - this.offsetLeft, e.pageY - this.offsetTop] :
-                [e.targetTouches[0].pageX - this.offsetLeft, e.targetTouches[0].pageY - this.offsetTop];
-            points = [downPoint];
+            downPoint = e.type === 'mousedown' ? [e.offsetX, e.offsetY] : [
+                e.targetTouches[0].pageX - this.offsetLeft,
+                e.targetTouches[0].pageY - this.offsetTop
+            ];
+            points = [];
         }
         function mouseUpHandler() {
             if (!downPoint) {
@@ -1512,7 +1610,7 @@
             if (!ok) {
                 return;
             }
-            polygonDrop(paper.getCutPolygon(), options.fill || 'none', container);
+            polygonDrop(paper.getCutPolygon(), fill, container);
             doChange();
         }
         container.addEventListener('touchmove', mouseMoveHandler);
@@ -1539,13 +1637,16 @@
             document.querySelector(options.container) :
             options.container || document.body;
         var instance = {};
+        var fill = options.fill || 'yellow';
         var paperBackgrund = jpaths.create({
             parent: container,
             stroke: options.stroke || 'none',
-            fill: options.fill || 'yellow'
+            fill: fill
         });
-        var center = [container.clientWidth / 2, container.clientHeight / 2];
-        var radius = Math.min(container.clientWidth, container.clientHeight) * 0.5;
+        var width = options.width || container.width || container.clientWidth;
+        var height = options.height || container.height || container.clientHeight;
+        var center = options.center || [width / 2, height / 2];
+        var radius = options.radius || Math.min(width, height) * 0.5;
         var base = {
             center: center,
             radius: radius
@@ -1568,6 +1669,7 @@
                 });
             });
             paperBackgrund.attr({
+                fill: shape.fill || fill,
                 path: path
             });
         }
@@ -1582,7 +1684,15 @@
             }
             freed = true;
             paperBackgrund.free();
-            console.log('free');
+        };
+        instance.setAttributes = function(attrs) {
+            if (freed) {
+                return;
+            }
+            fill = attrs.fill || fill;
+            paperBackgrund.attr({
+                fill: fill
+            });
         };
         return instance;
     }

@@ -2,6 +2,9 @@
     position: absolute;
     z-index: 100;
 }
+.inner-wrap {
+    position: absolute;
+}
 .fall {
     -webkit-transform-origin: center top ;
     -webkit-animation-name: fall;
@@ -62,9 +65,6 @@
     }
 }
 @-webkit-keyframes sway2d {
-    0% {
-        /*-webkit-transform: rotateZ(-15deg) rotateX(55deg); */
-    }
     30% {
         -webkit-transform: translate(10px, 0);
         -webkit-animation-timing-function: ease-in-out;
