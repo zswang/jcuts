@@ -1,8 +1,8 @@
 {
   "name": "jcuts",
-  "version": "0.0.5",
+  "version": "0.0.11",
   "homepage": "https://github.com/zswang/jcuts",
-  "authors": "zswang",
+  "author": "zswang",
   "description": "剪纸工具",
   "main": ["jcuts.js", "jcuts.css"],
   "moduleType": [
