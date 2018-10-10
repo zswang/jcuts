@@ -939,8 +939,8 @@
             var movePoint = e.type === 'mousemove' ?
                 [e.offsetX, e.offsetY] :
                 [
-                    e.targetTouches[0].pageX - this.offsetLeft,
-                    e.targetTouches[0].pageY - this.offsetTop
+                    e.targetTouches[0].pageX - e.target.offsetLeft,
+                    e.targetTouches[0].pageY - e.target.offsetTop
                 ];
             points.push(movePoint);
             if (points.length > 2) {
@@ -963,8 +963,8 @@
                 return;
             }
             downPoint = e.type === 'mousedown' ? [e.offsetX, e.offsetY] : [
-                e.targetTouches[0].pageX - this.offsetLeft,
-                e.targetTouches[0].pageY - this.offsetTop
+                e.targetTouches[0].pageX - e.target.offsetLeft,
+                e.targetTouches[0].pageY - e.target.offsetTop
             ];
             points = [];
         }
